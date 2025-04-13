@@ -1,0 +1,7 @@
+ROUTINE xmlparse    (xml_string : ARRAY OF STRING)             : BOOLEAN    FROM    XML_PARSER
+ROUTINE xmlGetStr   (elementTag , outstr : STRING)             : BOOLEAN    FROM    XML_PARSER
+ROUTINE xmlgetInt   (elementTag : STRING; outInt : INTEGER)    : BOOLEAN    FROM    XML_PARSER
+ROUTINE xmlgetFrame (elementTag : STRING; outFrame : XYZWPR)   : BOOLEAN    FROM    XML_PARSER
+ROUTINE xmlgetReal  (elementTag : STRING; outReal : REAL)      : BOOLEAN    FROM    XML_PARSER
+ROUTINE xmlClear                                                            FROM    XML_PARSER
+    

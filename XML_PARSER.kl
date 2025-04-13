@@ -1,0 +1,535 @@
+PROGRAM XML_PARSER
+%COMMENT = 'XML_PARSER_LIBRARY'
+%ALPHABETIZE
+%NOBUSYLAMP
+%NOLOCKGROUP
+%NOPAUSESHFT
+%STACKSIZE = 4000
+%NOPAUSE = ERROR + COMMAND + TPENABLE
+%NOABORT = COMMAND + ERROR + TPENABLE
+%INCLUDE kliotyps
+%INCLUDE klevccdf
+TYPE
+
+    xmlAttrStrct FROM XML_PARSER = STRUCTURE
+        key             : STRING[127]
+        value           : STRING[127] 
+    ENDSTRUCTURE
+
+    XmlStruct FROM XML_PARSER = STRUCTURE
+        tag             :   STRING[127]
+        inner_text      :   STRING[127]
+        parent_index    :   INTEGER
+        root_index      :   INTEGER
+    ENDSTRUCTURE
+
+    XmlElement  FROM XML_PARSER = STRUCTURE
+        tag             :   STRING[127]
+        inner_text      :   STRING[127]
+    ENDSTRUCTURE
+
+    EulerAngles FROM XML_PARSER = STRUCTURE
+        W               :   STRING[4]
+        P               :   STRING[4]
+        R               :   STRING[4]
+    ENDSTRUCTURE
+
+VAR
+    xmlstrct        FROM IS_PARSER  :   ARRAY[100] of XmlStruct
+    parsebuffer     FROM IS_PARSER  :   STRING[127]
+    currentNode     FROM IS_PARSER  :   XmlStruct
+    root            FROM IS_PARSER  :   XmlStruct
+    emptynode       FROM IS_PARSER  :   XmlStruct
+    emptyAtrr       FROM IS_PARSER  :   xmlAttrStrct
+    currentAttr     FROM IS_PARSER  :   xmlAttrStrct
+    xmlArraySize    FROM IS_PARSER  :   INTEGER
+    rootIdx         FROM IS_PARSER  :   INTEGER
+    xmldata         FROM IS_PARSER  :   ARRAY[100] of XmlElement
+    rotFormat       FROM IS_PARSER  :   EulerAngles
+
+%INCLUDE XML_PARSER.h
+ROUTINE parser_init                                                         FROM    XML_PARSER
+ROUTINE xmlpop       (popindex : INTEGER)                                   FROM    XML_PARSER
+ROUTINE SaveData                                                : BOOLEAN   FROM    XML_PARSER
+
+ROUTINE xmlParse
+VAR
+    i : INTEGER
+    k : INTEGER
+    l : INTEGER
+    j : INTEGER
+    tempi : INTEGER
+    tempj : INTEGER
+BEGIN   
+    i = 1
+    k = 1
+    l = 1
+    j = 1
+    
+
+    parser_init
+
+    WHILE (i <= STR_LEN(xml_string[j])) DO
+
+        IF (SUB_STR(xml_string[j], i, 1) = '<') THEN
+            
+            IF (parsebuffer <> '') THEN 
+                -- save inner text
+                IF currentNode.tag = emptynode.tag THEN
+                    POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)  
+                    RETURN (FALSE)
+                ENDIF
+                currentNode.inner_text = xmlstrct[k].inner_text + parsebuffer
+                xmlstrct[k].inner_text = currentNode.inner_text
+                parsebuffer = ''
+            ENDIF
+
+            IF i = 254 THEN
+                tempi = 1
+                tempj = j + 1
+            ELSE
+                tempi = i + 1
+                tempj = j
+            ENDIF
+
+            IF (SUB_STR(xml_string[tempj], tempi, 1) = '/' ) THEN
+                --end node
+                i = i + 2
+                IF i > 254 THEN
+                    i = i - 254
+                    j = j + 1
+                ENDIF
+
+                WHILE (SUB_STR(xml_string[j], i, 1) <> '>') DO
+                    parsebuffer = parsebuffer + SUB_STR(xml_string[j], i, 1)
+                    i = i + 1
+                    IF i > 254 THEN
+                        i = i - 254
+                        j = j + 1
+                    ENDIF
+                ENDWHILE
+
+                IF currentNode.tag = emptynode.tag THEN
+                    POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
+                    RETURN (FALSE)
+                ENDIF
+
+                IF currentNode.parent_index < 1 THEN
+                    IF currentNode.parent_index = -rootIdx THEN
+                        IF (currentNode.Tag <> parsebuffer) THEN
+                            POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
+                            RETURN(FALSE)
+                        ENDIF
+
+                        i = i + 1
+                        IF i > 254 THEN
+                            i = i - 254
+                            j = j + 1
+                        ENDIF    
+
+                        --end of data to parse
+                        IF SUB_STR(xml_string[j], i, 1) = '' THEN
+                            xmlArraySize = l
+                            RETURN (SaveData)
+                        ENDIF
+
+                        currentNode = emptynode
+                        l = l + 1
+                        K = l
+
+                    ELSE
+                            POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
+                            RETURN(FALSE)
+
+                    ENDIF
+                ELSE
+
+                    IF (currentNode.Tag <> xmlstrct[currentNode.parent_index].tag + '/' + parsebuffer) THEN
+                        --MISMATCH OF TAGS
+                        POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0)
+                        RETURN(FALSE)
+                    ENDIF
+                    
+
+
+                    --get parent node
+                    k = currentNode.parent_index
+                    IF currentNode.parent_index < 1 THEN
+                        POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0)
+                        RETURN (FALSE)
+                    ENDIF
+                    currentNode = xmlstrct[currentNode.parent_index]
+
+                
+
+                    i = i + 1
+                    IF i > 254 THEN
+                        i = i - 254
+                        j = j + 1
+                    ENDIF
+                ENDIF
+                parsebuffer = ''    
+            ELSE
+                
+                -- new node
+                IF currentNode.tag = emptynode.tag THEN
+                    rootIdx = rootIdx + 1
+                    currentNode = root
+                    currentNode.parent_index = -rootIdx
+                    currentNode.root_index = rootIdx
+
+                ELSE
+                    currentNode.tag         = ''
+                    currentNode.inner_text  = ''
+                    currentNode.parent_index   = k
+                    currentNode.root_index = rootIdx
+
+                    l = l + 1
+                    k = l
+                ENDIF
+
+                i = i + 1
+                IF i > 254 THEN
+                    i = i - 254
+                    j = j + 1
+                ENDIF
+                
+                --start tag
+                WHILE (SUB_STR(xml_string[j], i, 1) <> '>') DO
+                    parsebuffer = parsebuffer + SUB_STR(xml_string[j], i, 1)
+                    i = i + 1
+                    IF i > 254 THEN
+                        i = i - 254
+                        j = j + 1
+                    ENDIF
+
+                    -- save tag if attr
+                    IF (SUB_STR(xml_string[j], i, 1) = ' ') AND (currentNode.Tag = '') THEN
+                        currentNode.Tag = xmlstrct[currentNode.parent_index].tag + '/' +  parsebuffer
+                        parsebuffer = ''
+                        i = i + 1
+                        IF i > 254 THEN
+                            i = i - 254
+                            j = j + 1
+                        ENDIF
+                    ENDIF
+
+                    
+                    IF i = 1 THEN
+                        tempi = 254
+                        tempj = j - 1
+                    ELSE
+                        tempi = i - 1
+                        tempj = j
+                    ENDIF
+
+                    --delete spaces inside parsebuffer
+                    IF (SUB_STR(xml_string[tempj], tempi , 1) = ' ') THEN
+                        IF STR_LEN(parsebuffer) > 1 THEN 
+                            parsebuffer = SUB_STR(parsebuffer, 1, STR_LEN(parsebuffer))
+                        ELSE
+                            parsebuffer = ''
+                        ENDIF
+                    ENDIF
+                    
+                    -- set Atrribute key
+                    IF (SUB_STR(xml_string[j], i, 1) = '=') THEN
+                        currentAttr.key = parsebuffer
+                        parsebuffer = ''
+                    ENDIF
+
+                    -- set Attribute value
+                    IF (SUB_STR(xml_string[j], i, 1) = '"') THEN
+                        IF (currentAttr.key = '' ) THEN
+                            POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0) 
+                            RETURN (FALSE)
+                        ENDIF
+
+                        i = i + 1
+                        IF i > 254 THEN
+                            i = i - 254
+                            j = j + 1
+                        ENDIF
+
+                        parsebuffer = ''
+                        WHILE (SUB_STR(xml_string[j], i, 1) <> '"') DO
+                            parsebuffer = parsebuffer + SUB_STR(xml_string[j], i, 1)
+                            i = i + 1
+                            IF i > 254 THEN
+                                i = i - 254
+                                j = j + 1
+                            ENDIF
+                        ENDWHILE
+
+                        currentAttr.value = parsebuffer
+                        l = l + 1
+                        xmlstrct[l].tag            = currentNode.tag + '/' + currentAttr.key
+                        xmlstrct[l].inner_text     = currentAttr.value
+                        xmlstrct[l].parent_index   = k
+                        xmlstrct[l].root_index     = rootIdx
+
+                        currentAttr = emptyAtrr
+                        parsebuffer = ''
+                        i = i + 1
+                        IF i > 254 THEN
+                            i = i - 254
+                            j = j + 1
+                        ENDIF                   
+                    ENDIF         
+
+                ENDWHILE
+                
+               
+                IF i = 1 THEN
+                    tempi = 254
+                    tempj = j - 1
+                ELSE
+                    tempi = i - 1
+                    tempj = j
+                ENDIF
+                
+                --Inline element case
+                IF (SUB_STR(xml_string[tempj], tempi , 1) = '/') AND (SUB_STR(xml_string[j], i , 1) = '>') THEN
+                    IF (currentNode.tag = '') AND (STR_LEN(parsebuffer) > 0) THEN
+                        currentNode.tag = xmlstrct[currentNode.parent_index].tag + '/' + parsebuffer
+                    ENDIF
+                    xmlstrct[k].tag            = currentNode.tag
+                    xmlstrct[k].parent_index   = currentNode.parent_index
+                    xmlstrct[k].root_index     = rootIdx
+                    K = currentNode.parent_index
+                    currentNode = xmlstrct[currentNode.parent_index]
+                ELSE
+                    
+                    IF currentNode.Tag = '' THEN
+                        IF currentNode.parent_index < 1 THEN
+                            --root case
+                            currentNode.Tag = parsebuffer
+                        ELSE
+                            --node with attributes case
+                            currentNode.Tag = xmlstrct[currentNode.parent_index].tag + '/' + parsebuffer
+                        ENDIF
+                    ENDIF 
+
+                    xmlstrct[k].tag            = currentNode.tag
+                    xmlstrct[k].parent_index   = currentNode.parent_index
+                    xmlstrct[k].root_index     = rootIdx
+
+                ENDIF
+                parsebuffer= '' 
+                i = i + 1
+                IF i > 254 THEN
+                    i = i - 254
+                    j = j + 1
+                ENDIF                
+            ENDIF
+
+        ELSE
+            -- build inner text
+            parsebuffer = parsebuffer + SUB_STR(xml_string[j], i, 1)
+            i = i + 1
+            IF i > 254 THEN
+                i = i - 254
+                j = j + 1
+            ENDIF   
+        ENDIF
+
+
+    ENDWHILE
+
+    POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0) 
+    RETURN (FALSE)
+END xmlParse
+---------
+
+ROUTINE parser_init
+VAR
+    i : integer
+
+BEGIN
+    ----- initialize and reset Vars ------ 
+    emptyAtrr.key = ''
+    emptyAtrr.value = ''
+
+    emptynode.tag           = ''
+    emptynode.inner_text    = ''
+    emptynode.parent_index  = 0
+    xmlArraySize = 0
+    root = emptynode
+    root.parent_index = -1
+    rootIdx = 0
+    currentNode = emptynode
+    parsebuffer = ''
+
+    FOR i=1 TO ARRAY_LEN(xmlstrct) DO
+        xmlstrct[i] = emptynode
+    ENDFOR
+
+    IF UNINIT(xmldata[1].tag) THEN
+        FOR i=1 TO ARRAY_LEN(xmldata) DO
+            xmldata[i].tag = ''
+            xmldata[i].inner_text= ''
+        ENDFOR
+    ENDIF
+
+    IF UNINIT(rotFormat.W) THEN rotFormat.W = 'C';ENDIF
+    IF UNINIT(rotFormat.P) THEN rotFormat.P = 'B';ENDIF
+    IF UNINIT(rotFormat.R) THEN rotFormat.R = 'A';ENDIF
+    
+END parser_init
+
+--------
+
+ROUTINE xmlClear 
+VAR
+    i   :   INTEGER
+BEGIN
+
+    FOR i=1 TO ARRAY_LEN(xmldata) DO
+        xmldata[i].tag = ''
+        xmldata[i].inner_text = ''
+    ENDFOR
+
+END xmlClear
+--------
+
+ROUTINE SaveData
+VAR
+    i : INTEGER
+    j : INTEGER
+BEGIN
+
+    IF xmldata[ARRAY_LEN(xmldata)].tag <> '' THEN
+        POST_ERR(38100, 'XML_PARSER: Data array full', 0, 0) 
+        RETURN (FALSE)
+    ENDIF
+    
+    j = 1
+
+    WHILE (xmldata[j].tag <> '') AND (j < ARRAY_LEN(xmldata)) DO
+        j = j + 1
+    ENDWHILE
+
+    FOR i = 1 TO xmlArraySize DO
+        IF xmlstrct[i].inner_text  <> '' THEN
+            IF j > ARRAY_LEN(xmldata) THEN
+                POST_ERR(38100, 'XML_PARSER: Data array full', 0, 0) 
+                RETURN(FALSE)
+            ENDIF
+            xmldata[j].tag =  xmlstrct[i].tag;
+            xmldata[j].inner_text = xmlstrct[i].inner_text;
+            j = j + 1
+        ENDIF
+    ENDFOR
+    
+    RETURN (TRUE)
+END SaveData
+--------
+
+ROUTINE xmlpop --(popindex:INTEGER)
+VAR
+    i : INTEGER
+BEGIN
+
+    IF popindex = ARRAY_LEN(xmldata) THEN
+        xmldata[popindex].tag = ''
+        xmldata[popindex].inner_text  = '' 
+        RETURN 
+    ENDIF
+
+    FOR i = popindex TO ARRAY_LEN(xmldata) - 1 DO
+        xmldata[i] = xmldata[i+1]
+    ENDFOR
+
+    xmldata[ARRAY_LEN(xmldata)].tag = ''
+    xmldata[ARRAY_LEN(xmldata)].inner_text  = '' 
+    
+    RETURN
+
+END xmlpop
+--------
+
+ROUTINE xmlGetStr
+VAR
+    i   : INTEGER
+
+BEGIN
+
+    FOR i = 1 TO ARRAY_LEN(xmldata) DO
+        IF xmldata[i].tag = elementTag THEN
+            outstr = xmldata[i].inner_text
+            xmlpop(i)
+            RETURN (TRUE)
+        ENDIF      
+    ENDFOR
+    RETURN (FALSE)
+
+END xmlGetStr
+
+ROUTINE xmlGetInt
+VAR
+    i   : INTEGER
+
+BEGIN
+
+    FOR i = 1 TO ARRAY_LEN(xmldata) DO
+        IF xmldata[i].tag = elementTag THEN
+            CNV_STR_INT(xmldata[i].inner_text,outInt)
+            xmlpop(i)
+            RETURN (TRUE)
+        ENDIF      
+    ENDFOR
+    RETURN (FALSE)
+
+END xmlGetInt
+
+ROUTINE xmlGetFrame
+BEGIN
+
+    IF UNINIT(rotFormat.W) THEN rotFormat.W = 'C';ENDIF
+    IF UNINIT(rotFormat.P) THEN rotFormat.P = 'B';ENDIF
+    IF UNINIT(rotFormat.R) THEN rotFormat.R = 'A';ENDIF
+
+    IF NOT xmlGetReal(elementTag + '/X',outFrame.X ) THEN
+        RETURN (FALSE)
+    ENDIF 
+    IF NOT xmlGetReal(elementTag + '/Y',outFrame.Y ) THEN
+        RETURN (FALSE)
+    ENDIF
+    IF NOT xmlGetReal(elementTag + '/Z',outFrame.Z ) THEN
+        RETURN (FALSE)
+    ENDIF
+    IF NOT xmlGetReal(elementTag + '/' + rotFormat.R,outFrame.R ) THEN
+        RETURN (FALSE)
+    ENDIF
+    IF NOT xmlGetReal(elementTag + '/' + rotFormat.P,outFrame.P ) THEN
+        RETURN (FALSE)
+    ENDIF
+    IF NOT xmlGetReal(elementTag + '/' + rotFormat.W,outFrame.W ) THEN
+        RETURN (FALSE)
+    ENDIF
+
+    RETURN (TRUE)
+
+END xmlGetFrame
+
+ROUTINE xmlGetReal
+VAR
+    i : INTEGER
+    
+BEGIN
+
+    FOR i = 1 TO ARRAY_LEN(xmldata) DO
+        IF xmldata[i].tag = elementTag THEN
+            CNV_STR_REAL(xmldata[i].inner_text, outReal)
+            xmlpop(i)
+            RETURN (TRUE)
+        ENDIF      
+    ENDFOR
+    RETURN (FALSE)
+END xmlGetReal
+
+
+--------
+BEGIN
+-- empty
+END XML_PARSER
