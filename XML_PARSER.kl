@@ -50,7 +50,7 @@ VAR
 %INCLUDE XML_PARSER.h
 ROUTINE parser_init                                                         FROM    XML_PARSER
 ROUTINE xmlpop       (popindex : INTEGER)                                   FROM    XML_PARSER
-ROUTINE SaveData                                                : BOOLEAN   FROM    XML_PARSER
+ROUTINE saveData                                                : BOOLEAN   FROM    XML_PARSER
 
 ROUTINE xmlParse
 VAR
@@ -60,14 +60,25 @@ VAR
     j : INTEGER
     tempi : INTEGER
     tempj : INTEGER
+    strArraysize : INTEGER
 BEGIN   
+    -- current character in the input string
     i = 1
-    k = 1
-    l = 1
+    -- current array index in the input array
     j = 1
+    -- current index in the output array
+    l = 1
+    -- parent node index for the current node 
+    k = 1
+    
     
 
     parser_init
+
+    strArraysize = 0     
+    WHILE (( strArraysize < ARRAY_LEN(xml_string)) AND (xml_string[strArraysize+1] <> '')) DO
+        StrArraysize = StrArraysize + 1;
+    ENDWHILE
 
     WHILE (i <= STR_LEN(xml_string[j])) DO
 
@@ -129,13 +140,18 @@ BEGIN
 
                         --end of data to parse
                         IF SUB_STR(xml_string[j], i, 1) = '' THEN
-                            xmlArraySize = l
-                            RETURN (SaveData)
+                            -- only finish if this is the last string in the array
+                            IF j = StrArraysize THEN
+                                xmlArraySize = l
+                                RETURN (saveData)
+                            ENDIF
+                            j = j + 1
+                            i = 1
                         ENDIF
 
                         currentNode = emptynode
                         l = l + 1
-                        K = l
+                        k = l
 
                     ELSE
                             POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
@@ -392,7 +408,7 @@ BEGIN
 END xmlClear
 --------
 
-ROUTINE SaveData
+ROUTINE saveData
 VAR
     i : INTEGER
     j : INTEGER
@@ -422,7 +438,7 @@ BEGIN
     ENDFOR
     
     RETURN (TRUE)
-END SaveData
+END saveData
 --------
 
 ROUTINE xmlpop --(popindex:INTEGER)
@@ -527,6 +543,11 @@ BEGIN
     ENDFOR
     RETURN (FALSE)
 END xmlGetReal
+
+ROUTINE arrayconcat
+BEGIN
+
+END arrayconcat
 
 
 --------
