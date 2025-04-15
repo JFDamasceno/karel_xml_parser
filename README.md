@@ -197,6 +197,10 @@ xmlClear
 - To optimize used space in the parsed data array, only tags that contain values are stored. 
 
 
+## Unit Tests
+This Library uses the [KUNIT](https://github.com/onerobotics/KUnit) framework for Unit Testing
+
+
 ## Contributions
  1. Fork
  2. Create feature branch
