@@ -140,6 +140,42 @@ success = xmlGetStr('robot/name', robotName) --success returns TRUE
 -- Trying to access 'robot/name' again will now fail, since it was removed
 success = xmlGetStr('robot/name', anotherName)  -- success returns FALSE
 ```
+
+---
+
+#### Rotation Format for `xmlGetFrame`
+
+The `xmlgetFrame` function uses a **global structure variable** named `rotFormat` to determine how to extract and assign rotation values to the `XYZWPR` frame based on the XML tag names.
+
+##### `rotFormat` Structure
+
+The `rotFormat` structure is of type `EulerAngles`, with the following fields:
+- `rotFormat.w`
+- `rotFormat.p`
+- `rotFormat.r`
+
+Each field should contain the **XML tag name** that corresponds to the respective axis of rotation.
+
+##### Example:
+```karel
+-- Define rotation tag naming used in the XML
+rotFormat.w = 'Rx'
+rotFormat.p = 'Ry'
+rotFormat.r = 'Rz'
+
+-- Extract frame using custom tag names
+success = xmlgetFrame('robot/frame', targetFrame)
+```
+
+#### Expected XML:
+```xml
+<robot>
+  <frame x="100.0" y="200.0" z="300.0" Rx="90.0" Ry="0.0" Rz="180.0" />
+</robot>
+```
+
+This approach allows users to work with different rotation naming conventions in their XML data without modifying the parser logic. Simply adjust the `rotFormat` values to match your XML structure before calling `xmlgetFrame`.
+
 ---
 
 ### 5. Clean Up
@@ -158,10 +194,9 @@ xmlClear
 - XML must be well-formed. Nested tags must be closed properly.
 - Special namespaces or xml comments are not supported.
 - Max number of elements supported is 100 by default (can be changed in source).
+- To optimize used space in the parsed data array, only tags that contain values are stored. 
 
-## License
- This library is released under the MIT License. Feel free to use and adapt it for your projects.
- 
+
 ## Contributions
  1. Fork
  2. Create feature branch
@@ -169,3 +204,5 @@ xmlClear
  4. Push to the branch
  5. Create new Pull Request
 
+## License
+ This library is released under the MIT License. Feel free to use and adapt it for your projects.
