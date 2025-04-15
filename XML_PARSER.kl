@@ -35,17 +35,17 @@ TYPE
     ENDSTRUCTURE
 
 VAR
-    xmlstrct        FROM IS_PARSER  :   ARRAY[100] of XmlStruct
-    parsebuffer     FROM IS_PARSER  :   STRING[127]
-    currentNode     FROM IS_PARSER  :   XmlStruct
-    root            FROM IS_PARSER  :   XmlStruct
-    emptynode       FROM IS_PARSER  :   XmlStruct
-    emptyAtrr       FROM IS_PARSER  :   xmlAttrStrct
-    currentAttr     FROM IS_PARSER  :   xmlAttrStrct
-    xmlArraySize    FROM IS_PARSER  :   INTEGER
-    rootIdx         FROM IS_PARSER  :   INTEGER
-    xmldata         FROM IS_PARSER  :   ARRAY[100] of XmlElement
-    rotFormat       FROM IS_PARSER  :   EulerAngles
+    xmlstrct        FROM XML_PARSER  :   ARRAY[100] of XmlStruct
+    parsebuffer     FROM XML_PARSER  :   STRING[127]
+    currentNode     FROM XML_PARSER  :   XmlStruct
+    root            FROM XML_PARSER  :   XmlStruct
+    emptynode       FROM XML_PARSER  :   XmlStruct
+    emptyAtrr       FROM XML_PARSER  :   xmlAttrStrct
+    currentAttr     FROM XML_PARSER  :   xmlAttrStrct
+    xmlArraySize    FROM XML_PARSER  :   INTEGER
+    rootIdx         FROM XML_PARSER  :   INTEGER
+    xmldata         FROM XML_PARSER  :   ARRAY[100] of XmlElement
+    rotFormat       FROM XML_PARSER  :   EulerAngles
 
 %INCLUDE XML_PARSER.h
 ROUTINE parser_init                                                         FROM    XML_PARSER
@@ -54,13 +54,7 @@ ROUTINE saveData                                                : BOOLEAN   FROM
 
 ROUTINE xmlParse
 VAR
-    i : INTEGER
-    k : INTEGER
-    l : INTEGER
-    j : INTEGER
-    tempi : INTEGER
-    tempj : INTEGER
-    strArraysize : INTEGER
+    i,j,k,l,n,tempi,tempj,strArraysize : INTEGER
 BEGIN   
     -- current character in the input string
     i = 1
@@ -71,22 +65,37 @@ BEGIN
     -- parent node index for the current node 
     k = 1
     
-    
-
     parser_init
 
-    strArraysize = 0     
-    WHILE (( strArraysize < ARRAY_LEN(xml_string)) AND (xml_string[strArraysize+1] <> '')) DO
-        StrArraysize = StrArraysize + 1;
-    ENDWHILE
+    strArraysize = 0    
+    FOR n=1 TO ARRAY_LEN(xml_string) DO
+        IF (xml_string[n] <> '')THEN
+            strArraysize = n
+        ENDIF
+    ENDFOR 
 
-    WHILE (i <= STR_LEN(xml_string[j])) DO
+    IF strArraysize = 0 THEN
+        WRITE('XML string empty',CR)
+        POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0) 
+        RETURN (FALSE)
+    ENDIF
+
+    WRITE('StrArraysize = ', StrArraysize, CR)
+
+
+    WHILE ((i <= STR_LEN(xml_string[j])) OR (j < StrArraysize))  DO
+
+        IF i > STR_LEN(xml_string[j]) THEN
+            i = 1
+            j = j + 1
+        ENDIF
 
         IF (SUB_STR(xml_string[j], i, 1) = '<') THEN
             
             IF (parsebuffer <> '') THEN 
                 -- save inner text
                 IF currentNode.tag = emptynode.tag THEN
+                    WRITE('currentNode.tag = emptynode.tag',CR)
                     POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)  
                     RETURN (FALSE)
                 ENDIF
@@ -121,6 +130,7 @@ BEGIN
                 ENDWHILE
 
                 IF currentNode.tag = emptynode.tag THEN
+                    WRITE('currentNode.tag = emptynode.tag',CR)
                     POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
                     RETURN (FALSE)
                 ENDIF
@@ -128,6 +138,8 @@ BEGIN
                 IF currentNode.parent_index < 1 THEN
                     IF currentNode.parent_index = -rootIdx THEN
                         IF (currentNode.Tag <> parsebuffer) THEN
+                            --MISMATCH OF TAGS
+                            WRITE('currentNode.Tag <> parsebuffer',CR)
                             POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
                             RETURN(FALSE)
                         ENDIF
@@ -141,6 +153,7 @@ BEGIN
                         --end of data to parse
                         IF SUB_STR(xml_string[j], i, 1) = '' THEN
                             -- only finish if this is the last string in the array
+                            WRITE('value of j = ', j, CR)
                             IF j = StrArraysize THEN
                                 xmlArraySize = l
                                 RETURN (saveData)
@@ -154,6 +167,7 @@ BEGIN
                         k = l
 
                     ELSE
+                            WRITE('root does not match node',CR)
                             POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0)
                             RETURN(FALSE)
 
@@ -162,6 +176,7 @@ BEGIN
 
                     IF (currentNode.Tag <> xmlstrct[currentNode.parent_index].tag + '/' + parsebuffer) THEN
                         --MISMATCH OF TAGS
+                        WRITE('currentNode.Tag <> xmlstrct[currentNode.parent_index].tag + parsebuffer',CR)
                         POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0)
                         RETURN(FALSE)
                     ENDIF
@@ -171,6 +186,7 @@ BEGIN
                     --get parent node
                     k = currentNode.parent_index
                     IF currentNode.parent_index < 1 THEN
+                        WRITE('currentNode.parent_index < 1',CR)
                         POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0)
                         RETURN (FALSE)
                     ENDIF
@@ -257,6 +273,7 @@ BEGIN
                     -- set Attribute value
                     IF (SUB_STR(xml_string[j], i, 1) = '"') THEN
                         IF (currentAttr.key = '' ) THEN
+                            WRITE('currentAttr.key = empty',CR)
                             POST_ERR(38100, 'XML_PARSER: Parsing error, Tag mismatch', 0, 0) 
                             RETURN (FALSE)
                         ENDIF
@@ -352,6 +369,7 @@ BEGIN
 
     ENDWHILE
 
+    WRITE('XML string incomplete',CR)
     POST_ERR(38100, 'XML_PARSER: Parsing error', 0, 0) 
     RETURN (FALSE)
 END xmlParse
