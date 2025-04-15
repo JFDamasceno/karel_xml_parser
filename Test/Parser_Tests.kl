@@ -1,0 +1,185 @@
+PROGRAM Parser_Tests
+%COMMENT     = 'Unit Testing Functions'
+%ALPHABETIZE
+%NOBUSYLAMP
+%NOLOCKGROUP  
+%STACKSIZE = 4000
+VAR
+    TESTARRAY   : ARRAY[7] OF STRING[254]
+    RESULTARRAY : ARRAY[7] OF STRING[254]
+
+%INCLUDE ../xml_parser.h
+%INCLUDE kunit.h
+
+
+    ROUTINE standardparseTest : BOOLEAN
+    VAR
+        RET : BOOLEAN
+    BEGIN
+
+        RET = xmlparse(TESTARRAY)
+
+        RETURN(kunit_assert(RET))
+
+    END standardparseTest
+
+    ROUTINE getintTest : BOOLEAN    
+    VAR
+        RET : BOOLEAN
+        i   : INTEGER
+    BEGIN   
+    
+            RET = xmlGetInt('robot/id', i)
+            RETURN(kunit_eq_int(12345, i))
+
+    END getintTest
+
+    ROUTINE getframeTest : BOOLEAN
+    VAR
+        RET : BOOLEAN
+        xmlframe,frame : XYZWPR
+    BEGIN
+        
+            xmlframe.X = 100.0
+            xmlframe.Y = 200.0
+            xmlframe.Z = 300.0
+            xmlframe.W = 180.0
+            xmlframe.P = 0.0
+            xmlframe.R = 90.0
+    
+            RET = xmlGetFrame('robot/frame', xmlframe) 
+    
+            RETURN(kunit_eq_pos(frame, xmlframe))
+    
+    END getframeTest
+
+    ROUTINE getStringTest : BOOLEAN
+    VAR
+        RET : BOOLEAN
+        color : STRING[5]
+    BEGIN
+        RET = xmlGetStr('robot/color', color)
+        RETURN(kunit_eq_str('blue', color))
+    END getStringTest
+
+    ROUTINE getRealTest : BOOLEAN
+    VAR
+        RET  : BOOLEAN
+        size : REAL
+    BEGIN           
+        RET = xmlGetReal('robot/size', size)
+        RETURN(kunit_eq_r(31.01, size))
+    END getRealTest
+
+    ROUTINE clearTest : BOOLEAN
+    VAR
+        RET : BOOLEAN
+        name : STRING[6]
+    BEGIN
+        xmlClear
+        RET = xmlGetStr('robot/name', name)
+        RETURN(kunit_assert(NOT RET))
+    END clearTest
+
+
+    ROUTINE singlexmlTests
+    BEGIN    
+        xmlClear
+
+        TESTARRAY[1] = '<robot>'
+        TESTARRAY[2] = '<id>12345</id>'
+        TESTARRAY[3] = '<name>Robot1</name>'
+        TESTARRAY[4] = '<frame><X>100.0</X><Y>200.0</Y><Z>300.0</Z>'
+        TESTARRAY[5] = '<W>180.0</W><P>0.0</P><R>90.0</R></frame>'
+        TESTARRAY[6] = '<part size="31.01" color="blue" />'
+        TESTARRAY[7] = '</robot>'
+
+        kunit_test('single xml Parse Test',standardparseTest)       
+        
+        kunit_test('Get Integer Test',getintTest)
+
+        kunit_test('Get Frame Test',getframeTest)
+
+        kunit_test('Get String Test',getStringTest) 
+
+        kunit_test('Get Real Test',getRealTest)
+        
+        kunit_test('Clear Test',clearTest)
+
+    END singlexmlTests
+
+    ROUTINE concatxmltests
+    BEGIN
+        xmlClear
+
+        TESTARRAY[1] = '<robot><id>12345</id><name>Robot1</name><frame><X>100.0</X><Y>200.0</Y><Z>300.0</Z>'
+        TESTARRAY[1] = TESTARRAY[1] + '<W>180.0</W><P>0.0</P><R>90.0</R></frame><part size="31.01" color="blue" /></robot>'
+        TESTARRAY[1] = TESTARRAY[1] + '<robot><id>12345</id><name>Robot1</name><frame><X>100.0</X><Y>200.0</Y><Z>300.0</Z><W>18'
+        TESTARRAY[2] = '0.0</W><P>0.0</P><R>90.0</R></frame><part size="31.01" color="blue" /></robot>'
+        TESTARRAY[3] = ''
+        TESTARRAY[4] = ''
+        TESTARRAY[5] = ''
+        TESTARRAY[6] = ''
+        TESTARRAY[7] = ''
+
+        kunit_test('Concat xml parse Test',standardparseTest)       
+        
+        kunit_test('Get Integer 1st xml Test',getintTest)
+        kunit_test('Get Integer 2nd xml Test',getintTest)
+
+        kunit_test('Get Frame 1st xml Test',getframeTest)
+        kunit_test('Get Frame 2nd xml Test',getframeTest)
+
+        kunit_test('Get String 1st xml Test',getStringTest) 
+        kunit_test('Get String 2nd xml Test',getStringTest)
+
+        kunit_test('Get Real 1st xml Test',getRealTest)
+        kunit_test('Get Real 2nd xml Test',getRealTest)
+        
+        kunit_test('Clear Test',clearTest)
+
+    END concatxmltests
+
+
+    ROUTINE multipleparsetests
+    BEGIN
+        xmlClear
+
+        TESTARRAY[1] = '<robot>'
+        TESTARRAY[2] = '<id>12345</id>'
+        TESTARRAY[3] = '<name>Robot1</name>'
+        TESTARRAY[4] = '<frame><X>100.0</X><Y>200.0</Y><Z>300.0</Z>'
+        TESTARRAY[5] = '<W>180.0</W><P>0.0</P><R>90.0</R></frame>'
+        TESTARRAY[6] = '<part size="31.01" color="blue" />'
+        TESTARRAY[7] = '</robot>'
+
+        kunit_test('single xml Parse Test',standardparseTest)
+        kunit_test('single xml Parse Test',standardparseTest) 
+        
+        
+        kunit_test('Get Integer 1st xml Test',getintTest)
+        kunit_test('Get Integer 2nd xml Test',getintTest)
+
+        kunit_test('Get Frame 1st xml Test',getframeTest)
+        kunit_test('Get Frame 2nd xml Test',getframeTest)
+
+        kunit_test('Get String 1st xml Test',getStringTest) 
+        kunit_test('Get String 2nd xml Test',getStringTest)
+
+        kunit_test('Get Real 1st xml Test',getRealTest)
+        kunit_test('Get Real 2nd xml Test',getRealTest)
+    
+    END multipleparsetests
+
+
+    BEGIN
+        
+        singlexmlTests
+
+        concatxmltests
+
+        multipleparsetests
+
+        kunit_done
+
+    END Parser_Tests
