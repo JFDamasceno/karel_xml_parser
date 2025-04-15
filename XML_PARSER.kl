@@ -501,9 +501,9 @@ END xmlGetInt
 ROUTINE xmlGetFrame
 BEGIN
 
-    IF UNINIT(rotFormat.W) THEN rotFormat.W = 'C';ENDIF
-    IF UNINIT(rotFormat.P) THEN rotFormat.P = 'B';ENDIF
-    IF UNINIT(rotFormat.R) THEN rotFormat.R = 'A';ENDIF
+    IF UNINIT(rotFormat.W) THEN rotFormat.W = 'W';ENDIF
+    IF UNINIT(rotFormat.P) THEN rotFormat.P = 'P';ENDIF
+    IF UNINIT(rotFormat.R) THEN rotFormat.R = 'R';ENDIF
 
     IF NOT xmlGetReal(elementTag + '/X',outFrame.X ) THEN
         RETURN (FALSE)
