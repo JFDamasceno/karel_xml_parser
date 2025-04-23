@@ -7,7 +7,7 @@ PROGRAM Parser_Tests
 VAR
     TESTARRAY   : ARRAY[7] OF STRING[254]
 
-%INCLUDE ../xml_parser.h
+%INCLUDE ../FANUC_ISRA_PARSER/IS_PARSER.h
 %INCLUDE kunit.h
 
 
@@ -16,7 +16,7 @@ VAR
         RET : BOOLEAN
     BEGIN
 
-        RET = xmlparse(TESTARRAY)
+        RET = xml_parse(TESTARRAY)
 
         RETURN(kunit_assert(RET))
 
@@ -28,7 +28,7 @@ VAR
         i   : INTEGER
     BEGIN   
     
-            RET = xmlGetInt('robot/id', i)
+            RET = getInteger('robot/id', i)
             RETURN(kunit_eq_int(12345, i))
 
     END getintTest
@@ -46,7 +46,7 @@ VAR
             frame.P = 0.0
             frame.R = 90.0
     
-            RET = xmlGetFrame('robot/frame', xmlframe) 
+            RET = getFrame('robot/frame', xmlframe) 
     
             RETURN(kunit_eq_pos(frame, xmlframe))
     
@@ -57,7 +57,7 @@ VAR
         RET : BOOLEAN
         color : STRING[5]
     BEGIN
-        RET = xmlGetStr('robot/part/color', color)
+        RET = getString('robot/part/color', color)
         RETURN(kunit_eq_str('blue', color))
     END getStringTest
 
@@ -66,7 +66,7 @@ VAR
         RET  : BOOLEAN
         size : REAL
     BEGIN           
-        RET = xmlGetReal('robot/part/size', size)
+        RET = getReal('robot/part/size', size)
         RETURN(kunit_eq_r(31.01, size))
     END getRealTest
 
@@ -75,15 +75,15 @@ VAR
         RET : BOOLEAN
         name : STRING[6]
     BEGIN
-        xmlClear
-        RET = xmlGetStr('robot/name', name)
+        clearBuffer
+        RET = getString('robot/name', name)
         RETURN(kunit_assert((NOT RET)))
     END clearTest
 
 
     ROUTINE singlexmlTests
     BEGIN    
-        xmlClear
+        clearBuffer
 
         TESTARRAY[1] = '<robot>'
         TESTARRAY[2] = '<id>12345</id>'
@@ -109,7 +109,7 @@ VAR
 
     ROUTINE concatxmltests
     BEGIN
-        xmlClear
+        clearBuffer
 
         TESTARRAY[1] = '<robot><id>12345</id><name>Robot1</name><frame><X>100.0</X><Y>200.0</Y><Z>300.0</Z>'
         TESTARRAY[1] = TESTARRAY[1] + '<W>180.0</W><P>0.0</P><R>90.0</R></frame><part size="31.01" color="blue"/></robot>'
@@ -142,7 +142,7 @@ VAR
 
     ROUTINE multipleparsetests
     BEGIN
-        xmlClear
+        clearBuffer
 
         TESTARRAY[1] = '<robot>'
         TESTARRAY[2] = '<id>12345</id>'

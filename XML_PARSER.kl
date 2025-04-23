@@ -80,9 +80,6 @@ BEGIN
         RETURN (FALSE)
     ENDIF
 
-    WRITE('StrArraysize = ', StrArraysize, CR)
-
-
     WHILE ((i <= STR_LEN(xml_string[j])) OR (j < StrArraysize))  DO
 
         IF i > STR_LEN(xml_string[j]) THEN
@@ -153,7 +150,6 @@ BEGIN
                         --end of data to parse
                         IF SUB_STR(xml_string[j], i, 1) = '' THEN
                             -- only finish if this is the last string in the array
-                            WRITE('value of j = ', j, CR)
                             IF j = StrArraysize THEN
                                 xmlArraySize = l
                                 RETURN (saveData)
