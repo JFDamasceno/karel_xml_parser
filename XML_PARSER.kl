@@ -558,13 +558,7 @@ BEGIN
     RETURN (FALSE)
 END xmlGetReal
 
-ROUTINE arrayconcat
-BEGIN
-
-END arrayconcat
-
-
---------
+-------
 BEGIN
 -- empty
 END XML_PARSER
